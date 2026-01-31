@@ -26,17 +26,38 @@ import os
 from binance.client import Client
 from dotenv import load_dotenv
 
-# Load .env locally (harmless on Streamlit Cloud)
+# Load .env for local development
 load_dotenv()
 
-API_KEY = os.getenv("BINANCE_API_KEY")
-API_SECRET = os.getenv("BINANCE_API_SECRET")
-
 def get_binance_client():
-    if not API_KEY or not API_SECRET:
-        raise RuntimeError("Binance API keys not found in environment variables")
+    """
+    Returns a Binance Futures Testnet client.
+    Works both locally (.env) and on Streamlit Cloud (st.secrets).
+    """
 
-    client = Client(API_KEY, API_SECRET, testnet=True)
+    api_key = None
+    api_secret = None
+
+    try:
+        import streamlit as st
+        api_key = st.secrets.get("BINANCE_API_KEY")
+        api_secret = st.secrets.get("BINANCE_API_SECRET")
+    except Exception:
+        pass  # Streamlit not available (local run)
+
+    # 2️⃣ Fallback to environment variables (.env)
+    if not api_key or not api_secret:
+        api_key = os.getenv("BINANCE_API_KEY")
+        api_secret = os.getenv("BINANCE_API_SECRET")
+
+    # 3️⃣ Final validation
+    if not api_key or not api_secret:
+        raise RuntimeError(
+            "Binance API keys not found. "
+            "Set them in Streamlit Secrets or in a .env file."
+        )
+
+    client = Client(api_key, api_secret, testnet=True)
     client.FUTURES_URL = "https://testnet.binancefuture.com"
     return client
 
